@@ -29,6 +29,14 @@ Convert between data formats from the command line.
 cargo install formatforge
 ```
 
+## Aliases
+
+Two binaries are installed:
+```bash
+formatforge data.json data.toml  # full name
+fmtf data.json data.toml         # short alias
+```
+
 ## Usage
 
 ```bash
