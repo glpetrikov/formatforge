@@ -1,6 +1,6 @@
 [package]
 name = "formatforge"
-version = "1.0.4"
+version = "1.0.5"
 edition = "2024"
 description = "Convert between data formats: JSON, TOML, YAML, XML, ENV, KDL, CBOR, INI, JSON5, JSONC, MessagePack"
 keywords = ["format", "converter", "json", "toml", "msgpack"]
