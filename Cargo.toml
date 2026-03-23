@@ -1,0 +1,30 @@
+[package]
+name = "formatforge"
+version = "1.0.0"
+edition = "2021"
+description = "Convert between data formats: JSON, TOML, YAML, XML, ENV, KDL, CBOR, INI, JSON5, JSONC, MessagePack"
+keywords = ["format", "converter", "json", "toml", "msgpack"]
+license = "MIT"
+repository = "https://github.com/glpetrikov/formatforge"
+categories = ["command-line-utilities", "encoding"]
+
+[[bin]]
+name = "formatforge"
+path = "src/main.rs"
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+toml = "0.8"
+serde_yaml = "0.9"
+quick-xml = { version = "0.36", features = ["serialize"] }
+dotenvy = "0.15"
+kdl = "6"
+ciborium = "0.2"
+anyhow = "1"
+clap = { version = "4", features = ["derive"] }
+indexmap = { version = "2", features = ["serde"] }
+rust-ini = "0.21"
+json5 = "0.4"
+jsonc-parser = { version = "0.23", features = ["serde"] }
+rmp-serde = "1"
