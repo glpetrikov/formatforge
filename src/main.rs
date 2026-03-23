@@ -4,7 +4,7 @@ use anyhow::{Context, Result};
 use clap::Parser;
 use std::path::PathBuf;
 
-/// translator — convert between data formats
+/// formatforge — convert between data formats
 ///
 /// Supported formats:
 ///
@@ -34,14 +34,14 @@ use std::path::PathBuf;
 ///
 /// Examples:
 ///
-///   translator data.json data.toml
+///   formatforge data.json data.toml
 ///
-///   translator data.json data.cbor        # pack to binary ===
-///   translator data.cbor data.json        # unpack from binary
+///   formatforge data.json data.cbor        # pack to binary ===
+///   formatforge data.cbor data.json        # unpack from binary
 ///
-///   translator data.json out.yaml --to yaml
+///   formatforge data.json out.yaml --to yaml
 #[derive(Parser)]
-#[command(name = "translator", version)]
+#[command(name = "formatforge", version)]
 struct Cli {
     /// Input file (format detected from extension)
     input: PathBuf,
