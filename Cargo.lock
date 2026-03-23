@@ -230,7 +230,7 @@ checksum = "877a4ace8713b0bcf2a4e7eec82529c029f1d0619886d18145fea96c3ffe5c0f"
 
 [[package]]
 name = "formatforge"
-version = "1.0.2"
+version = "1.0.3"
 dependencies = [
  "anyhow",
  "ciborium",
@@ -240,6 +240,7 @@ dependencies = [
  "json5",
  "jsonc-parser",
  "kdl",
+ "paste",
  "quick-xml",
  "rmp-serde",
  "rust-ini",
@@ -470,6 +471,12 @@ dependencies = [
  "dlv-list",
  "hashbrown 0.14.5",
 ]
+
+[[package]]
+name = "paste"
+version = "1.0.15"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "57c0d7b74b563b49d38dae00a0c37d4d6de9b432382b2892f0574ddcae73fd0a"
 
 [[package]]
 name = "pest"

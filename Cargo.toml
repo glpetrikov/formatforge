@@ -1,6 +1,6 @@
 [package]
 name = "formatforge"
-version = "1.0.2"
+version = "1.0.3"
 edition = "2024"
 description = "Convert between data formats: JSON, TOML, YAML, XML, ENV, KDL, CBOR, INI, JSON5, JSONC, MessagePack"
 keywords = ["format", "converter", "json", "toml", "msgpack"]
@@ -28,3 +28,4 @@ rust-ini = "0.21"
 json5 = "0.4"
 jsonc-parser = { version = "0.23", features = ["serde"] }
 rmp-serde = "1"
+paste = "1"

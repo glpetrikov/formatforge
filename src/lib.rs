@@ -1,14 +1,38 @@
-pub mod formats;
+//! # formatforge
+//!
+//! Convert between data formats: JSON, TOML, YAML, XML, ENV, KDL, CBOR, INI, JSON5, JSONC, MessagePack.
+//!
+//! ## Quick start
+//!
+//! ```rust
+//! use formatforge::convert_bytes;
+//!
+//! let json = br#"{"name": "test"}"#;
+//! let toml = convert_bytes(json, "json", "toml").unwrap();
+//! ```
 
+pub mod formats;
 use anyhow::Result;
 use serde_json::Value;
 
+/// Convert bytes from one format to another.
+///
+/// # Example
+/// ```rust
+/// let json = br#"{"name": "test"}"#;
+/// let toml = formatforge::convert_bytes(json, "json", "toml").unwrap();
+/// ```
 pub fn convert_bytes(input: &[u8], from: &str, to: &str) -> Result<Vec<u8>> {
     let value = formats::read_to_value_bytes(input, from)?;
     formats::write_from_value_bytes(&value, to)
 }
 
-/// convert file to file (format determined by file extension).
+/// Convert a file to another format, detecting formats from file extensions.
+///
+/// # Example
+/// ```no_run
+/// formatforge::convert_file("config.json", "config.toml").unwrap();
+/// ```
 pub fn convert_file(
     input: impl AsRef<std::path::Path>,
     output: impl AsRef<std::path::Path>,
@@ -21,143 +45,87 @@ pub fn convert_file(
     formats::write_from_value(&value, output, out_fmt)
 }
 
+/// Decode bytes into a `serde_json::Value`.
+///
+/// # Example
+/// ```rust
+/// let json = br#"{"hello": "world"}"#;
+/// let value = formatforge::decode(json, "json").unwrap();
+/// ```
 pub fn decode(input: &[u8], from: &str) -> Result<Value> {
     formats::read_to_value_bytes(input, from)
 }
 
+/// Encode a `serde_json::Value` into bytes of the given format.
+///
+/// # Example
+/// ```rust
+/// let value = serde_json::json!({"hello": "world"});
+/// let yaml = formatforge::encode(&value, "yaml").unwrap();
+/// ```
 pub fn encode(value: &Value, to: &str) -> Result<Vec<u8>> {
     formats::write_from_value_bytes(value, to)
 }
 
-pub fn json_to_toml(input: &[u8]) -> Result<Vec<u8>> {
-    convert_bytes(input, "json", "toml")
-}
-pub fn json_to_yaml(input: &[u8]) -> Result<Vec<u8>> {
-    convert_bytes(input, "json", "yaml")
-}
-pub fn json_to_xml(input: &[u8]) -> Result<Vec<u8>> {
-    convert_bytes(input, "json", "xml")
-}
-pub fn json_to_env(input: &[u8]) -> Result<Vec<u8>> {
-    convert_bytes(input, "json", "env")
-}
-pub fn json_to_kdl(input: &[u8]) -> Result<Vec<u8>> {
-    convert_bytes(input, "json", "kdl")
-}
-pub fn json_to_cbor(input: &[u8]) -> Result<Vec<u8>> {
-    convert_bytes(input, "json", "cbor")
-}
-
-pub fn toml_to_json(input: &[u8]) -> Result<Vec<u8>> {
-    convert_bytes(input, "toml", "json")
-}
-pub fn toml_to_yaml(input: &[u8]) -> Result<Vec<u8>> {
-    convert_bytes(input, "toml", "yaml")
-}
-pub fn toml_to_xml(input: &[u8]) -> Result<Vec<u8>> {
-    convert_bytes(input, "toml", "xml")
-}
-pub fn toml_to_env(input: &[u8]) -> Result<Vec<u8>> {
-    convert_bytes(input, "toml", "env")
-}
-pub fn toml_to_kdl(input: &[u8]) -> Result<Vec<u8>> {
-    convert_bytes(input, "toml", "kdl")
-}
-pub fn toml_to_cbor(input: &[u8]) -> Result<Vec<u8>> {
-    convert_bytes(input, "toml", "cbor")
+// Generate all format conversion functions like json_to_toml, yaml_to_json, etc.
+macro_rules! make_converters {
+    ($($from:ident),*) => {
+        $(
+            make_converters!(@to $from, json);
+            make_converters!(@to $from, toml);
+            make_converters!(@to $from, yaml);
+            make_converters!(@to $from, xml);
+            make_converters!(@to $from, env);
+            make_converters!(@to $from, kdl);
+            make_converters!(@to $from, cbor);
+            make_converters!(@to $from, ini);
+            make_converters!(@to $from, json5);
+            make_converters!(@to $from, jsonc);
+            make_converters!(@to $from, msgpack);
+        )*
+    };
+    (@to $from:ident, $to:ident) => {
+        paste::paste! {
+            pub fn [<$from _to_ $to>](input: &[u8]) -> Result<Vec<u8>> {
+                convert_bytes(input, stringify!($from), stringify!($to))
+            }
+        }
+    };
 }
 
-pub fn yaml_to_json(input: &[u8]) -> Result<Vec<u8>> {
-    convert_bytes(input, "yaml", "json")
-}
-pub fn yaml_to_toml(input: &[u8]) -> Result<Vec<u8>> {
-    convert_bytes(input, "yaml", "toml")
-}
-pub fn yaml_to_xml(input: &[u8]) -> Result<Vec<u8>> {
-    convert_bytes(input, "yaml", "xml")
-}
-pub fn yaml_to_env(input: &[u8]) -> Result<Vec<u8>> {
-    convert_bytes(input, "yaml", "env")
-}
-pub fn yaml_to_kdl(input: &[u8]) -> Result<Vec<u8>> {
-    convert_bytes(input, "yaml", "kdl")
-}
-pub fn yaml_to_cbor(input: &[u8]) -> Result<Vec<u8>> {
-    convert_bytes(input, "yaml", "cbor")
-}
+make_converters!(
+    json, toml, yaml, xml, env, kdl, cbor, ini, json5, jsonc, msgpack
+);
 
-pub fn xml_to_json(input: &[u8]) -> Result<Vec<u8>> {
-    convert_bytes(input, "xml", "json")
-}
-pub fn xml_to_toml(input: &[u8]) -> Result<Vec<u8>> {
-    convert_bytes(input, "xml", "toml")
-}
-pub fn xml_to_yaml(input: &[u8]) -> Result<Vec<u8>> {
-    convert_bytes(input, "xml", "yaml")
-}
-pub fn xml_to_env(input: &[u8]) -> Result<Vec<u8>> {
-    convert_bytes(input, "xml", "env")
-}
-pub fn xml_to_kdl(input: &[u8]) -> Result<Vec<u8>> {
-    convert_bytes(input, "xml", "kdl")
-}
-pub fn xml_to_cbor(input: &[u8]) -> Result<Vec<u8>> {
-    convert_bytes(input, "xml", "cbor")
-}
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-pub fn cbor_to_json(input: &[u8]) -> Result<Vec<u8>> {
-    convert_bytes(input, "cbor", "json")
-}
-pub fn cbor_to_toml(input: &[u8]) -> Result<Vec<u8>> {
-    convert_bytes(input, "cbor", "toml")
-}
-pub fn cbor_to_yaml(input: &[u8]) -> Result<Vec<u8>> {
-    convert_bytes(input, "cbor", "yaml")
-}
-pub fn cbor_to_xml(input: &[u8]) -> Result<Vec<u8>> {
-    convert_bytes(input, "cbor", "xml")
-}
-pub fn cbor_to_env(input: &[u8]) -> Result<Vec<u8>> {
-    convert_bytes(input, "cbor", "env")
-}
-pub fn cbor_to_kdl(input: &[u8]) -> Result<Vec<u8>> {
-    convert_bytes(input, "cbor", "kdl")
-}
+    #[test]
+    fn test_json_to_toml() {
+        let json = br#"{"name": "test", "version": "1.0"}"#;
+        let toml = json_to_toml(json).unwrap();
+        let toml_str = String::from_utf8(toml).unwrap();
+        assert!(toml_str.contains("name"));
+        assert!(toml_str.contains("test"));
+    }
 
-pub fn env_to_json(input: &[u8]) -> Result<Vec<u8>> {
-    convert_bytes(input, "env", "json")
-}
-pub fn env_to_toml(input: &[u8]) -> Result<Vec<u8>> {
-    convert_bytes(input, "env", "toml")
-}
-pub fn env_to_yaml(input: &[u8]) -> Result<Vec<u8>> {
-    convert_bytes(input, "env", "yaml")
-}
-pub fn env_to_xml(input: &[u8]) -> Result<Vec<u8>> {
-    convert_bytes(input, "env", "xml")
-}
-pub fn env_to_kdl(input: &[u8]) -> Result<Vec<u8>> {
-    convert_bytes(input, "env", "kdl")
-}
-pub fn env_to_cbor(input: &[u8]) -> Result<Vec<u8>> {
-    convert_bytes(input, "env", "cbor")
-}
+    #[test]
+    fn test_json_to_msgpack_and_back() {
+        let json = br#"{"hello": "world"}"#;
+        let msgpack = json_to_msgpack(json).unwrap();
+        let back = msgpack_to_json(&msgpack).unwrap();
+        let s = String::from_utf8(back).unwrap();
+        assert!(s.contains("hello"));
+        assert!(s.contains("world"));
+    }
 
-pub fn kdl_to_json(input: &[u8]) -> Result<Vec<u8>> {
-    convert_bytes(input, "kdl", "json")
-}
-pub fn kdl_to_toml(input: &[u8]) -> Result<Vec<u8>> {
-    convert_bytes(input, "kdl", "toml")
-}
-pub fn kdl_to_yaml(input: &[u8]) -> Result<Vec<u8>> {
-    convert_bytes(input, "kdl", "yaml")
-}
-pub fn kdl_to_xml(input: &[u8]) -> Result<Vec<u8>> {
-    convert_bytes(input, "kdl", "xml")
-}
-pub fn kdl_to_env(input: &[u8]) -> Result<Vec<u8>> {
-    convert_bytes(input, "kdl", "env")
-}
-pub fn kdl_to_cbor(input: &[u8]) -> Result<Vec<u8>> {
-    convert_bytes(input, "kdl", "cbor")
+    #[test]
+    fn test_ini_to_json() {
+        let ini = b"[section]\nkey=value\n";
+        let json = ini_to_json(ini).unwrap();
+        let s = String::from_utf8(json).unwrap();
+        assert!(s.contains("section"));
+        assert!(s.contains("key"));
+    }
 }
