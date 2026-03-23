@@ -1,5 +1,6 @@
-use anyhow::{bail, Result};
-use serde_json::{Map, Value};
+use anyhow::{Result, bail};
+use indexmap::IndexMap;
+use serde_json::Value;
 
 pub fn from_bytes(bytes: &[u8]) -> Result<Value> {
     let s = std::str::from_utf8(bytes)?;
@@ -13,29 +14,33 @@ pub fn to_bytes(value: &Value) -> Result<Vec<u8>> {
 }
 
 fn parse_xml(s: &str) -> Result<Value> {
-    // Simple XML -> JSON: use quick-xml events
-    use quick_xml::events::Event;
     use quick_xml::Reader;
+    use quick_xml::events::Event;
 
     let mut reader = Reader::from_str(s);
     reader.config_mut().trim_text(true);
 
-    let mut stack: Vec<(String, Map<String, Value>)> = vec![];
+    let mut stack: Vec<(String, IndexMap<String, Value>)> = vec![];
     let mut result = Value::Null;
 
     loop {
         match reader.read_event() {
             Ok(Event::Start(e)) => {
                 let name = std::str::from_utf8(e.name().as_ref())?.to_string();
-                stack.push((name, Map::new()));
+                let mut map = IndexMap::new();
+                for attr in e.attributes() {
+                    let attr = attr?;
+                    let key = format!("@{}", std::str::from_utf8(attr.key.as_ref())?);
+                    let val = attr.unescape_value()?.to_string();
+                    map.insert(key, Value::String(val));
+                }
+                stack.push((name, map));
             }
             Ok(Event::End(_)) => {
                 if let Some((name, map)) = stack.pop() {
-                    let val = if map.is_empty() {
-                        Value::Object(Map::new())
-                    } else {
-                        Value::Object(map)
-                    };
+                    // Convert IndexMap to serde_json::Map preserving order
+                    let json_map: serde_json::Map<String, Value> = map.into_iter().collect();
+                    let val = Value::Object(json_map);
                     if let Some(parent) = stack.last_mut() {
                         let entry = parent.1.entry(name).or_insert(Value::Array(vec![]));
                         if let Value::Array(arr) = entry {
@@ -56,10 +61,18 @@ fn parse_xml(s: &str) -> Result<Value> {
             }
             Ok(Event::Empty(e)) => {
                 let name = std::str::from_utf8(e.name().as_ref())?.to_string();
+                let mut map = IndexMap::new();
+                for attr in e.attributes() {
+                    let attr = attr?;
+                    let key = format!("@{}", std::str::from_utf8(attr.key.as_ref())?);
+                    let val = attr.unescape_value()?.to_string();
+                    map.insert(key, Value::String(val));
+                }
                 if let Some(parent) = stack.last_mut() {
+                    let json_map: serde_json::Map<String, Value> = map.into_iter().collect();
                     let entry = parent.1.entry(name).or_insert(Value::Array(vec![]));
                     if let Value::Array(arr) = entry {
-                        arr.push(Value::Object(Map::new()));
+                        arr.push(Value::Object(json_map));
                     }
                 }
             }
@@ -69,14 +82,14 @@ fn parse_xml(s: &str) -> Result<Value> {
         }
     }
 
-    // Unwrap single-element arrays for cleaner output
     Ok(simplify(result))
 }
 
 fn simplify(v: Value) -> Value {
     match v {
-        Value::Object(map) => Value::Object(
-            map.into_iter()
+        Value::Object(map) => {
+            let ordered: indexmap::IndexMap<String, Value> = map
+                .into_iter()
                 .map(|(k, v)| {
                     let v = simplify(v);
                     let v = if let Value::Array(mut arr) = v {
@@ -90,8 +103,9 @@ fn simplify(v: Value) -> Value {
                     };
                     (k, v)
                 })
-                .collect(),
-        ),
+                .collect();
+            Value::Object(ordered.into_iter().collect())
+        }
         Value::Array(arr) => Value::Array(arr.into_iter().map(simplify).collect()),
         other => other,
     }
@@ -101,11 +115,23 @@ fn write_xml(value: &Value, tag: &str, out: &mut String, depth: usize) {
     let indent = "  ".repeat(depth);
     match value {
         Value::Object(map) => {
-            out.push_str(&format!("{}<{}>\n", indent, tag));
-            for (k, v) in map {
-                write_xml(v, k, out, depth + 1);
+            let attrs: Vec<_> = map.iter().filter(|(k, _)| k.starts_with('@')).collect();
+            let children: Vec<_> = map.iter().filter(|(k, _)| !k.starts_with('@')).collect();
+
+            let attr_str = attrs
+                .iter()
+                .map(|(k, v)| format!(" {}=\"{}\"", &k[1..], v.as_str().unwrap_or("")))
+                .collect::<String>();
+
+            if children.is_empty() {
+                out.push_str(&format!("{}<{}{}/>\n", indent, tag, attr_str));
+            } else {
+                out.push_str(&format!("{}<{}{}>\n", indent, tag, attr_str));
+                for (k, v) in &children {
+                    write_xml(v, k, out, depth + 1);
+                }
+                out.push_str(&format!("{}</{}>\n", indent, tag));
             }
-            out.push_str(&format!("{}</{}>\n", indent, tag));
         }
         Value::Array(arr) => {
             for item in arr {

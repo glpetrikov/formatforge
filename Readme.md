@@ -21,6 +21,8 @@ Convert between data formats from the command line.
 | JSONC | `.jsonc` | JSON with comments |
 | MessagePack | `.msgpack` | Binary format |
 
+> **Note:** TOML and XML may not preserve key/attribute order after conversion.
+
 ## Installation
 
 ```bash
